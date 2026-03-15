@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Jelly Match - Pro Telegram Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <style>
+        /* ========================
+           PRO UI & COLOR PALETTE
+           ======================== */
+        :root { 
+            --cell-size: 12.5%; 
+            --board-bg: #15152a; /* Deep elegant dark blue */
+            --bg-grad-1: #1e133d; 
+            --bg-grad-2: #101c38;
+            --primary: #00e5ff;
+            --accent: #ffca28;
+        }
+        
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: none; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            margin: 0; padding: 0; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+            background: linear-gradient(135deg, var(--bg-grad-1), var(--bg-grad-2));
+            font-family: 'Nunito', sans-serif;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100vh; overflow: hidden; color: white;
+        }
+
+        .container { width: 100%; max-width: 420px; position: relative; display: flex; flex-direction: column; height: 100%; padding: 15px; }
+
+        /* SVG ICONS */
+        .icon { width: 22px; height: 22px; fill: currentColor; display: inline-block; vertical-align: middle; }
+
+        /* ========================
+           HOME SCREEN (MAIN MENU)
+           ======================== */
+        #home-screen { display: flex; flex-direction: column; height: 100%; justify-content: space-between; padding: 10px 0; transition: opacity 0.3s; z-index: 50; }
+        #home-screen.hidden { display: none; }
+
+        /* Top Profile Bar */
+        .profile-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 10px 15px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); backdrop-filter: blur(10px); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .user-info { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 1.1rem; }
+        .avatar { width: 38px; height: 38px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid var(--primary); box-shadow: 0 0 10px rgba(0, 229, 255, 0.4); }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .coin-box { display: flex; align-items: center; gap: 6px; font-family: 'Fredoka One'; color: var(--accent); font-size: 1.3rem; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; border: 1px solid rgba(255,202,40,0.5); box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); }
+
+        /* Title Area */
+        .title-area { text-align: center; margin: 15px 0; }
+        .title-area h1 { font-family: 'Fredoka One'; font-size: 4rem; margin: 0; line-height: 1.1; text-shadow: 0 8px 15px rgba(0,0,0,0.6); background: linear-gradient(to bottom, #ffffff, #81d4fa, #00e5ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
+        .title-area p { margin: 5px 0 0; color: #b3e5fc; font-size: 1rem; letter-spacing: 3px; text-transform: uppercase; font-weight: 900; }
+
+        /* Store / Boosters Area */
+        .store-section { background: rgba(0,0,0,0.25); border-radius: 20px; padding: 15px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
+        .store-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .store-title { font-family: 'Fredoka One'; font-size: 1.1rem; color: #fff; display: flex; align-items: center; gap: 8px; }
+        
+        .booster-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .booster-card { background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.08); border-radius: 15px; padding: 12px 5px; text-align: center; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; box-shadow: inset 0 2px 5px rgba(255,255,255,0.05); }
+        .booster-card.active { background: rgba(0, 229, 255, 0.15); border-color: #00e5ff; box-shadow: 0 0 15px rgba(0,229,255,0.3), inset 0 2px 5px rgba(255,255,255,0.2); transform: translateY(-3px); }
+        .booster-icon-wrap { height: 45px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); }
+        .booster-cost { display: flex; align-items: center; gap: 4px; font-size: 1rem; color: var(--accent); font-weight: bold; }
+        .booster-name { font-size: 0.75rem; color: #ccc; text-transform: uppercase; font-weight: 900; margin-bottom: 5px; }
+        .check-mark { position: absolute; top: -8px; right: -8px; background: #00e5ff; color: #000; border-radius: 50%; width: 22px; height: 22px; display: none; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .booster-card.active .check-mark { display: flex; }
+
+        /* Main Menu Buttons */
+        .main-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 15px; }
+        .btn { display: flex; align-items: center; justify-content: center; gap: 10px; border: none; padding: 18px; font-size: 1.4rem; font-family: 'Fredoka One'; border-radius: 35px; cursor: pointer; text-transform: uppercase; transition: transform 0.1s, filter 0.2s; box-shadow: 0 8px 20px rgba(0,0,0,0.4); width: 100%; color: white; }
+        .btn:active { transform: scale(0.95); box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
+        .btn-start { background: linear-gradient(to bottom, #00e5ff, #0072ff); border: 2px solid #b3e5fc; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .btn-ad { background: linear-gradient(to bottom, #ffe082, #ff8f00); color: #3e2723; border: 2px solid #fff8e1; text-shadow: 0 1px 2px rgba(255,255,255,0.5); }
+
+        /* ========================
+           GAME SCREEN (PLAY AREA)
+           ======================== */
+        #game-screen { display: flex; flex-direction: column; height: 100%; justify-content: center; transition: opacity 0.3s; }
+        #game-screen.hidden { display: none; }
+
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .level-badge { background: linear-gradient(to bottom, #00e5ff, #0072ff); padding: 6px 20px; border-radius: 20px; font-family: 'Fredoka One'; font-size: 1.2rem; box-shadow: 0 4px 10px rgba(0,0,0,0.4); border: 2px solid rgba(255,255,255,0.3); }
+        .btn-icon { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); color: white; border-radius: 14px; width: 44px; height: 44px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+        .btn-icon:active { transform: scale(0.9); background: rgba(255,255,255,0.2); }
+
+        .progress-container { width: 100%; background: rgba(0,0,0,0.6); border-radius: 12px; height: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; box-shadow: inset 0 2px 5px rgba(0,0,0,0.8); }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #00e5ff, #0072ff); width: 0%; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 12px; }
+        
+        .stats-container { display: flex; justify-content: space-between; margin-bottom: 15px; }
+        .stat-box { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); padding: 8px 15px; border-radius: 15px; text-align: center; width: 48%; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); }
+        .stat-title { font-size: 0.75rem; font-weight: 900; text-transform: uppercase; color: #81d4fa; letter-spacing: 1px; }
+        .stat-value { font-family: 'Fredoka One'; font-size: 1.6rem; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+
+        /* THE BOARD */
+        .board-border { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.8); position: relative; border: 1px solid rgba(255,255,255,0.08); backdrop-filter: blur(10px); }
+        .grid-container { position: relative; width: 100%; aspect-ratio: 1; background-color: var(--board-bg); border-radius: 12px; overflow: hidden; box-shadow: inset 0 8px 20px rgba(0,0,0,0.9); }
+        .grid-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); }
+        .grid-cell { background-color: rgba(255,255,255,0.02); border-radius: 8px; margin: 1.5px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); }
+        .grid-cell:nth-child(even) { background-color: rgba(0,0,0,0.2); }
+        
+        .grid-cell.ice::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, rgba(255,255,255,0.5), rgba(135, 206, 235, 0.2)); border: 2px solid rgba(255,255,255,0.8); border-radius: 8px; box-shadow: inset 0 0 15px rgba(255,255,255,0.8); pointer-events: none; z-index: 1; }
+
+        #particle-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
+        .grid { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; }
+        
+        /* ========================
+           3D GUMMY JELLY CANDIES 
+           (Universally Appealing)
+           ======================== */
+        .sweet { position: absolute; width: var(--cell-size); height: var(--cell-size); padding: 3px; cursor: grab; display: flex; align-items: center; justify-content: center; will-change: transform; z-index: 3;}
+        .sweet.animating { transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .sweet.hidden { transform: scale(0); opacity: 0; pointer-events: none; }
+        .sweet-inner { width: 100%; height: 100%; position: relative; transition: transform 0.15s, filter 0.15s; display: flex; align-items: center; justify-content: center; }
+
+        /* Powerups Effects */
+        .sweet.bomb .sweet-inner { animation: pulseBomb 0.8s infinite alternate; filter: drop-shadow(0 0 8px #fff); border: 2px solid #fff; border-radius: 50%;}
+        @keyframes pulseBomb { 0% { transform: scale(0.9); } 100% { transform: scale(1.1); filter: drop-shadow(0 0 15px #ffeb3b); } }
+
+        /* The Rainbow Lollipop Bomb */
+        .sweet.color_bomb .sweet-inner { 
+            background: repeating-conic-gradient(#ff0844 0 36deg, #ffb199 36deg 72deg, #f6d365 72deg 108deg, #43e97b 108deg 144deg, #00e5ff 144deg 180deg, #c471ed 180deg 216deg, #ff0844 216deg 252deg, #ffb199 252deg 288deg, #f6d365 288deg 324deg, #43e97b 324deg 360deg);
+            border-radius: 50%; border: 2px solid white; animation: spinRainbow 3s linear infinite; box-shadow: 0 6px 10px rgba(0,0,0,0.5), inset 0 -4px 8px rgba(0,0,0,0.5); 
+        }
+        .sweet.color_bomb .sweet-inner::after { content: ''; position: absolute; top: 10%; left: 15%; width: 40%; height: 25%; background: rgba(255,255,255,0.7); border-radius: 50%; transform: rotate(-20deg); }
+        @keyframes spinRainbow { 100% { transform: rotate(360deg); } }
+
+        /* 1. Red Gummy (Soft Rounded Square) */
+        .candy-red { background: radial-gradient(circle at 30% 30%, #ff4b2b, #d50000); border-radius: 35%; width: 90%; height: 90%; box-shadow: inset -4px -4px 8px rgba(100,0,0,0.6), 0 6px 8px rgba(0,0,0,0.5); border: 1px solid #ff758c; }
+        
+        /* 2. Blue Jelly (Perfect Sphere) */
+        .candy-blue { background: radial-gradient(circle at 30% 30%, #00e5ff, #0055ff); border-radius: 50%; width: 90%; height: 90%; box-shadow: inset -4px -4px 8px rgba(0,50,100,0.6), 0 6px 8px rgba(0,0,0,0.5); border: 1px solid #81d4fa; }
+        
+        /* 3. Yellow Drop (Tear/Triangle shape) */
+        .candy-yellow { background: radial-gradient(circle at 30% 30%, #fff176, #ff8f00); border-radius: 50% 50% 50% 15% / 50% 50% 50% 15%; transform: rotate(45deg); width: 85%; height: 85%; box-shadow: inset -4px -4px 8px rgba(150,50,0,0.6), 0 6px 8px rgba(0,0,0,0.5); border: 1px solid #ffe082; }
+        
+        /* 4. Green Leaf/Pillow (Soft Hexagon) */
+        .candy-green { background: radial-gradient(circle at 30% 30%, #69f0ae, #2e7d32); border-radius: 20px; width: 90%; height: 90%; transform: scaleY(0.85); box-shadow: inset -4px -4px 8px rgba(0,80,0,0.6), 0 6px 8px rgba(0,0,0,0.5); border: 1px solid #b9f6ca; }
+        
+        /* 5. Purple Grape (Soft Diamond) */
+        .candy-purple { background: radial-gradient(circle at 30% 30%, #e040fb, #6a1b9a); border-radius: 16px; width: 80%; height: 80%; transform: rotate(45deg); box-shadow: inset -4px -4px 8px rgba(50,0,100,0.6), 0 6px 8px rgba(0,0,0,0.5); border: 1px solid #ea80fc; }
+
+        /* Universal Glossy Highlight for all Candies */
+        .candy-red::after, .candy-blue::after, .candy-yellow::after, .candy-green::after, .candy-purple::after {
+            content: ''; position: absolute; top: 10%; left: 15%; width: 45%; height: 25%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.9), rgba(255,255,255,0.1));
+            border-radius: 50%; transform: rotate(-20deg); pointer-events: none;
+        }
+
+        /* Hover & Touch effect */
+        .sweet.hint .sweet-inner { animation: heartbeat 1s infinite; }
+        @keyframes heartbeat { 0%, 100% {transform: scale(1);} 50% {transform: scale(1.15) rotate(5deg); filter: brightness(1.2) drop-shadow(0 4px 4px rgba(0,0,0,0.6));} }
+
+        /* ========================
+           OVERLAYS & ADS
+           ======================== */
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 15, 25, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; transition: opacity 0.3s; backdrop-filter: blur(10px); }
+        .overlay.hidden { opacity: 0; pointer-events: none; }
+        .overlay h1 { font-family: 'Fredoka One'; font-size: 2.8rem; margin: 0; text-shadow: 0 4px 10px rgba(0,0,0,0.8); text-align: center; }
+        .overlay p { font-size: 1.1rem; color: #ccc; margin: 10px 0 20px; font-weight: bold;}
+
+        /* AD CONTAINERS */
+        .ad-banner-box { width: 300px; min-height: 250px; background: rgba(255,255,255,0.03); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 15px 0; border: 1px dashed rgba(255,255,255,0.15); overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+
+        .btn-overlay { width: 85%; max-width: 320px; margin: 6px 0; padding: 14px; font-size: 1.2rem;}
+        .btn-danger { background: linear-gradient(135deg, #ff416c, #ff4b2b); border: 2px solid #ff758c; box-shadow: 0 6px 15px rgba(255, 65, 108, 0.4); }
+
+        .shake-board { animation: shakeBoard 0.4s both; }
+        @keyframes shakeBoard { 0%, 100% {transform: translateX(0);} 20%, 60% {transform: translateX(-4px);} 40%, 80% {transform: translateX(4px);} }
+        .floating-text { position: absolute; font-family: 'Fredoka One'; font-size: 2.2rem; color: #fff; text-shadow: 0 3px 6px #000; z-index: 50; animation: floatTxt 1s forwards; pointer-events: none;}
+        @keyframes floatTxt { 0% { transform: translate(-50%, 0) scale(0.5); opacity: 0; } 20% { transform: translate(-50%, -20px) scale(1.1); opacity: 1; } 100% { transform: translate(-50%, -60px) scale(0.8); opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <!-- SVG SPRITES (Clean Professional Icons, No Emojis) -->
+    <svg style="display:none;">
+        <symbol id="icon-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ffca28"/><circle cx="12" cy="12" r="7" fill="#ffb300"/><path d="M11 7h2v10h-2z" fill="#fff"/></symbol>
+        <symbol id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></symbol>
+        <symbol id="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" fill="currentColor"/></symbol>
+        <symbol id="icon-sound-on" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" fill="currentColor"/></symbol>
+        <symbol id="icon-sound-off" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" fill="currentColor"/></symbol>
+        <symbol id="icon-video" viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" fill="currentColor"/></symbol>
+        <symbol id="icon-user" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"/></symbol>
+        <symbol id="icon-store" viewBox="0 0 24 24"><path d="M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z" fill="currentColor"/></symbol>
+        <symbol id="icon-home" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="currentColor"/></symbol>
+    </svg>
+
+    <div class="container" id="app-wrapper">
+
+        <!-- ========================================== -->
+        <!-- 1. HOME SCREEN (MAIN MENU)                 -->
+        <!-- ========================================== -->
+        <div id="home-screen">
+            <div class="profile-bar">
+                <div class="user-info">
+                    <div class="avatar" id="tg-avatar"><svg class="icon"><use href="#icon-user"></use></svg></div>
+                    <span id="tg-name">Player</span>
+                </div>
+                <div class="coin-box"><svg class="icon"><use href="#icon-coin"></use></svg> <span id="coin-ui-main">0</span></div>
+            </div>
+
+            <div class="title-area">
+                <h1>JELLY<br>MATCH</h1>
+                <p>Telegram Edition</p>
+            </div>
+
+            <!-- Pre-game Boosters Shop -->
+            <div class="store-section">
+                <div class="store-header">
+                    <div class="store-title"><svg class="icon"><use href="#icon-store"></use></svg> Power-ups Store</div>
+                </div>
+                <div class="booster-list">
+                    <div class="booster-card" id="boost-moves" onclick="toggleBooster('moves', 300)">
+                        <div class="check-mark">✓</div>
+                        <div class="booster-icon-wrap"><span style="color:#00e5ff; font-weight:900; font-size:1.8rem; font-family:'Fredoka One';">+5</span></div>
+                        <div class="booster-name">Moves</div>
+                        <div class="booster-cost"><svg class="icon" style="width:14px;height:14px;"><use href="#icon-coin"></use></svg> 300</div>
+                    </div>
+                    <div class="booster-card" id="boost-bomb" onclick="toggleBooster('bomb', 500)">
+                        <div class="check-mark">✓</div>
+                        <div class="booster-icon-wrap"><div style="width:26px;height:26px;background:#fff;border-radius:50%;box-shadow:0 0 15px #ffeb3b; border:2px solid #ccc;"></div></div>
+                        <div class="booster-name">Bomb</div>
+                        <div class="booster-cost"><svg class="icon" style="width:14px;height:14px;"><use href="#icon-coin"></use></svg> 500</div>
+                    </div>
+                    <div class="booster-card" id="boost-color" onclick="toggleBooster('colorBomb', 1000)">
+                        <div class="check-mark">✓</div>
+                        <div class="booster-icon-wrap"><div style="width:26px;height:26px;background:repeating-conic-gradient(#ff0844 0 36deg, #ffb199 36deg 72deg, #f6d365 72deg 108deg, #43e97b 108deg 144deg, #00e5ff 144deg 180deg, #c471ed 180deg 216deg, #ff0844 216deg 252deg, #ffb199 252deg 288deg, #f6d365 288deg 324deg, #43e97b 324deg 360deg);border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px rgba(0,0,0,0.5);"></div></div>
+                        <div class="booster-name">Rainbow</div>
+                        <div class="booster-cost"><svg class="icon" style="width:14px;height:14px;"><use href="#icon-coin"></use></svg> 1K</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="main-actions">
+                <button class="btn btn-start" onclick="startGame()"><svg class="icon"><use href="#icon-play"></use></svg> START GAME</button>
+                <button class="btn btn-ad" id="free-coin-btn" onclick="watchAdForCoins()"><svg class="icon"><use href="#icon-video"></use></svg> Free 500 Coins</button>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- 2. GAME SCREEN (PLAY AREA)                 -->
+        <!-- ========================================== -->
+        <div id="game-screen" class="hidden">
+            <div class="top-bar">
+                <div class="level-badge" id="level-ui">Level 1</div>
+                <div style="display: flex; gap:10px;">
+                    <div class="coin-box" style="padding: 4px 12px; font-size:1rem;"><svg class="icon" style="width:16px;height:16px;"><use href="#icon-coin"></use></svg> <span id="coin-ui-game">0</span></div>
+                    <div class="btn-icon" onclick="pauseGame()"><svg class="icon"><use href="#icon-pause"></use></svg></div>
+                </div>
+            </div>
+
+            <div class="progress-container"><div class="progress-fill" id="progress-bar"></div></div>
+
+            <div class="stats-container">
+                <div class="stat-box"><div class="stat-title">Target</div><div class="stat-value" id="score-ui">0</div></div>
+                <div class="stat-box"><div class="stat-title">Moves</div><div class="stat-value" id="moves-ui" style="color:#00e5ff;">20</div></div>
+            </div>
+
+            <div class="board-border" id="board-border">
+                <div class="grid-container">
+                    <div class="grid-bg" id="grid-bg"></div>
+                    <div class="grid" id="grid"></div>
+                    <canvas id="particle-canvas" width="400" height="400"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- OVERLAYS (PAUSE, NEXT LEVEL, GAME OVER)    -->
+        <!-- ========================================== -->
+        <div id="pause-screen" class="overlay hidden">
+            <h1 style="color:#00e5ff;">PAUSED</h1>
+            <p>Take a breath and plan your moves.</p>
+            <button class="btn btn-start btn-overlay" onclick="resumeGame()"><svg class="icon"><use href="#icon-play"></use></svg> Resume</button>
+            <button class="btn btn-start btn-overlay" style="background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.3);" id="sound-toggle-btn" onclick="toggleSound()"><svg class="icon"><use href="#icon-sound-on"></use></svg> Sound: ON</button>
+            <button class="btn btn-danger btn-overlay" onclick="quitToMenu()"><svg class="icon"><use href="#icon-home"></use></svg> Quit to Menu</button>
+        </div>
+
+        <div id="next-level-screen" class="overlay hidden">
+            <h1 style="color:#00e5ff; font-size:3.5rem;">CLEARED!</h1>
+            <p style="color:#aed581; font-weight:bold; font-size:1.3rem;">Reward: +<span id="earned-coins">0</span> Coins</p>
+            
+            <!-- ADSTERRA BANNER AD -->
+            <div class="ad-banner-box">
+                <script type="text/javascript">
+                    atOptions = { 'key' : 'e2e78517ad906e7fdbccb4f78e68becf', 'format' : 'iframe', 'height' : 250, 'width' : 300, 'params' : {} };
+                </script>
+                <script type="text/javascript" src="//resignedincidentallysurprise.com/e2e78517ad906e7fdbccb4f78e68becf/invoke.js"></script>
+            </div>
+
+            <button class="btn btn-start btn-overlay" onclick="startNextLevel()"><svg class="icon"><use href="#icon-play"></use></svg> Next Level</button>
+        </div>
+
+        <div id="game-over-screen" class="overlay hidden">
+            <h1 style="color: #ff4b2b;">NO MOVES LEFT</h1>
+            
+            <!-- ADSTERRA BANNER AD -->
+            <div class="ad-banner-box">
+                <script type="text/javascript">
+                    atOptions = { 'key' : 'e2e78517ad906e7fdbccb4f78e68becf', 'format' : 'iframe', 'height' : 250, 'width' : 300, 'params' : {} };
+                </script>
+                <script type="text/javascript" src="//resignedincidentallysurprise.com/e2e78517ad906e7fdbccb4f78e68becf/invoke.js"></script>
+            </div>
+
+            <!-- Rewarded Ad -->
+            <button class="btn btn-ad btn-overlay" onclick="watchAdForMoves()"><svg class="icon"><use href="#icon-video"></use></svg> Get +5 Moves</button>
+            <button class="btn btn-danger btn-overlay" onclick="retryLevel()">🔄 Try Again</button>
+        </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- LOGIC & AD INTEGRATION                     -->
+    <!-- ========================================== -->
+    <script>
+        // Telegram Setup
+        const tg = window.Telegram.WebApp;
+        tg.expand(); tg.ready();
+
+        let playerName = "Player";
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            playerName = tg.initDataUnsafe.user.first_name;
+            if(tg.initDataUnsafe.user.photo_url) {
+                document.getElementById('tg-avatar').innerHTML = `<img src="${tg.initDataUnsafe.user.photo_url}" alt="DP">`;
+            }
+        }
+        document.getElementById('tg-name').innerText = playerName;
+
+        // ADSTERRA SMARTLINK REWARDED
+        const SMARTLINK_URL = "https://resignedincidentallysurprise.com/jqxzy0tm?key=258a29ef2f16d3463ab627f4d5650e24";
+
+        function watchAdForMoves() {
+            window.open(SMARTLINK_URL, '_blank');
+            moves += 5; updateUI();
+            document.getElementById('game-over-screen').classList.add('hidden');
+            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            showFloatingScore(3, 3, "+5 MOVES!", 0); resetHintTimer();
+        }
+
+        function watchAdForCoins() {
+            window.open(SMARTLINK_URL, '_blank');
+            totalCoins += 500; updateCoinUI();
+            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            let btn = document.getElementById('free-coin-btn');
+            btn.innerHTML = "<svg class='icon'><use href='#icon-coin'></use></svg> Collected!"; 
+            btn.style.background = "#4CAF50"; btn.style.color="#fff"; btn.disabled = true;
+            setTimeout(()=>{
+                btn.innerHTML = "<svg class='icon'><use href='#icon-video'></use></svg> Free 500 Coins";
+                btn.style.background = ""; btn.style.color=""; btn.disabled = false;
+            }, 60000); // Reset after 1 minute
+        }
+
+        // Store Logic
+        let activeBoosters = { moves: false, bomb: false, colorBomb: false };
+        function toggleBooster(type, cost) {
+            let card = document.getElementById(`boost-${type=== 'colorBomb' ? 'color' : type}`);
+            if(activeBoosters[type]) {
+                activeBoosters[type] = false; totalCoins += cost; card.classList.remove('active');
+            } else {
+                if(totalCoins >= cost) {
+                    activeBoosters[type] = true; totalCoins -= cost; card.classList.add('active');
+                    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+                } else {
+                    if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+                    card.style.borderColor = 'red'; setTimeout(()=> card.style.borderColor = '', 300);
+                }
+            }
+            updateCoinUI();
+        }
+
+        // 3D Jelly/Gummy Candy Types
+        const sweetTypes =[ 
+            { id: 'candy-blue', color: '#00e5ff' }, // Circle
+            { id: 'candy-red', color: '#ff4b2b' },  // Square
+            { id: 'candy-yellow', color: '#fff176' }, // Drop
+            { id: 'candy-green', color: '#69f0ae' },  // Hexagon/Pillow
+            { id: 'candy-purple', color: '#e040fb' }  // Diamond
+        ];
+        
+        const gridSize = 8;
+        let board =[], iceGrid =[], sweetPool =[];
+        let score = 0, targetScore = 0, moves = 0, currentLevel = 1;
+        let totalCoins = parseInt(localStorage.getItem('jellyCoins')) || 1000; // 1000 free starter coins
+        
+        function updateCoinUI() {
+            localStorage.setItem('jellyCoins', totalCoins);
+            document.getElementById('coin-ui-main').innerText = totalCoins;
+            document.getElementById('coin-ui-game').innerText = totalCoins;
+        }
+        updateCoinUI();
+        
+        let isAnimating = false, currentCombo = 0, hintTimer = null, isMuted = false, isPaused = false;
+
+        const gridEl = document.getElementById('grid'), gridBg = document.getElementById('grid-bg'), boardBorder = document.getElementById('board-border');
+        
+        // Canvas Particles
+        const canvas = document.getElementById('particle-canvas'), ctx = canvas.getContext('2d');
+        let particles =[];
+        function resizeCanvas() { canvas.width = gridEl.clientWidth; canvas.height = gridEl.clientHeight; }
+        window.addEventListener('resize', resizeCanvas);
+
+        function spawnParticles(gridX, gridY, colorStr, isMassive = false) {
+            const cellSize = canvas.width / gridSize, cx = (gridX + 0.5) * cellSize, cy = (gridY + 0.5) * cellSize;
+            let count = isMassive ? 30 : 12;
+            for(let i=0; i<count; i++) {
+                const angle = Math.random() * Math.PI * 2, speed = isMassive ? Math.random() * 8 + 2 : Math.random() * 4 + 1;
+                particles.push({ x: cx, y: cy, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: 1.0, decay: Math.random() * 0.05 + 0.02, color: colorStr === 'rainbow' ? `hsl(${Math.random()*360}, 100%, 50%)` : colorStr, size: Math.random() * (isMassive ? 6 : 4) + 2 });
+            }
+        }
+        function drawParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for(let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i]; p.x += p.vx; p.y += p.vy; p.life -= p.decay;
+                if(p.life <= 0) { particles.splice(i, 1); continue; }
+                ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+            }
+            ctx.globalAlpha = 1.0; requestAnimationFrame(drawParticles);
+        }
+
+        // Audio & Haptics
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx, lastPopTime = 0;
+        function playSound(type) {
+            if (tg.HapticFeedback) {
+                if (type === 'swap') tg.HapticFeedback.impactOccurred('light');
+                else if (type === 'pop') tg.HapticFeedback.impactOccurred('medium');
+                else if (type === 'bomb' || type === 'color_bomb') tg.HapticFeedback.impactOccurred('heavy');
+                else if (type === 'win') tg.HapticFeedback.notificationOccurred('success');
+                else if (type === 'lose') tg.HapticFeedback.notificationOccurred('error');
+            }
+            if(isMuted) return; if(!audioCtx) audioCtx = new AudioContext(); if(audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime; if(type === 'pop') { if(now - lastPopTime < 0.05) return; lastPopTime = now; }
+            const osc = audioCtx.createOscillator(), gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination);
+            if(type === 'swap') { osc.type = 'sine'; osc.frequency.setValueAtTime(400, now); osc.frequency.exponentialRampToValueAtTime(600, now + 0.1); gain.gain.setValueAtTime(0.1, now); osc.start(now); osc.stop(now + 0.1); }
+            else if(type === 'pop') { osc.type = 'triangle'; osc.frequency.setValueAtTime(800+(Math.random()*200), now); gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15); osc.start(now); osc.stop(now + 0.15); }
+            else if(type === 'bomb') { osc.type = 'square'; osc.frequency.setValueAtTime(150, now); osc.frequency.exponentialRampToValueAtTime(40, now + 0.5); gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5); osc.start(now); osc.stop(now + 0.5); }
+            else if(type === 'color_bomb') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(800, now); osc.frequency.linearRampToValueAtTime(100, now + 0.8); gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.8); osc.start(now); osc.stop(now + 0.8); }
+            else if(type === 'win') { osc.type = 'sine'; osc.frequency.setValueAtTime(400, now); osc.frequency.setValueAtTime(600, now+0.1); osc.frequency.setValueAtTime(800, now+0.2); gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0, now + 0.5); osc.start(now); osc.stop(now + 0.5); }
+        }
+        function toggleSound() { 
+            isMuted = !isMuted; 
+            const btn = document.getElementById('sound-toggle-btn');
+            btn.innerHTML = isMuted ? '<svg class="icon"><use href="#icon-sound-off"></use></svg> Sound: OFF' : '<svg class="icon"><use href="#icon-sound-on"></use></svg> Sound: ON';
+        }
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        // Object Pooling
+        function initPool() {
+            gridEl.innerHTML = ''; sweetPool =[];
+            for(let i=0; i<80; i++) {
+                const el = document.createElement('div'); el.className = 'sweet hidden';
+                const inner = document.createElement('div'); inner.className = 'sweet-inner';
+                el.appendChild(inner); gridEl.appendChild(el);
+                sweetPool.push({ element: el, inner: inner, active: false, x: 0, y: 0, type: '', special: 'none' });
+            }
+        }
+        function getPooledSweet() { return sweetPool.find(s => !s.active); }
+        function assignSweet(x, y, typeObj, special = 'none', animateFromTop = false) {
+            let s = getPooledSweet(); if(!s) return null;
+            s.active = true; s.x = x; s.y = y; s.type = typeObj ? typeObj.id : 'rainbow'; s.color = typeObj ? typeObj.color : 'rainbow'; s.special = special;
+            s.inner.className = `sweet-inner ${s.type}`; s.element.className = `sweet ${special === 'bomb' ? 'bomb' : (special === 'color_bomb' ? 'color_bomb' : '')}`;
+            if(animateFromTop) { s.element.classList.remove('animating'); s.element.style.transform = `translate3d(${x * 100}%, ${(y - gridSize) * 100}%, 0)`; s.element.offsetHeight; }
+            s.element.classList.add('animating'); s.element.style.transform = `translate3d(${x * 100}%, ${y * 100}%, 0)`; return s;
+        }
+        function destroySweet(s) { s.active = false; s.element.className = 'sweet hidden'; }
+
+        // Game Functions
+        function createGridUI() { gridBg.innerHTML = ''; for(let y=0; y<gridSize; y++) { iceGrid[y] =[]; for(let x=0; x<gridSize; x++) { const cell = document.createElement('div'); cell.className = 'grid-cell'; cell.id = `cell-${x}-${y}`; gridBg.appendChild(cell); iceGrid[y][x] = false; } } }
+        function getLevelConfig(level) { const movesList =[0, 15, 20, 22, 25, 30]; return { moves: movesList[level] || 25, target: 1000 + (level * 600), iceCount: level === 1 ? 0 : Math.min(30, level * 5) }; }
+
+        function startGame() { 
+            initPool(); resizeCanvas(); requestAnimationFrame(drawParticles); 
+            if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); 
+            document.getElementById('home-screen').classList.add('hidden'); 
+            document.getElementById('game-screen').classList.remove('hidden'); 
+            loadLevel(true); 
+        }
+        
+        function pauseGame() { isPaused = true; clearHint(); document.getElementById('pause-screen').classList.remove('hidden'); }
+        function resumeGame() { isPaused = false; document.getElementById('pause-screen').classList.add('hidden'); resetHintTimer(); }
+        function quitToMenu() { 
+            isPaused = false; document.getElementById('pause-screen').classList.add('hidden'); 
+            document.getElementById('game-screen').classList.add('hidden'); document.getElementById('home-screen').classList.remove('hidden'); 
+            clearHint();
+        }
+
+        function startNextLevel() { currentLevel++; document.getElementById('next-level-screen').classList.add('hidden'); loadLevel(false); }
+        function retryLevel() { document.getElementById('game-over-screen').classList.add('hidden'); loadLevel(false); }
+
+        function loadLevel(isNewStart) {
+            const config = getLevelConfig(currentLevel);
+            moves = config.moves; targetScore = config.target; score = 0;
+            
+            if(isNewStart && activeBoosters.moves) moves += 5;
+
+            document.getElementById('level-ui').innerText = `Level ${currentLevel}`;
+            createGridUI();
+            let icePlaced = 0; while(icePlaced < config.iceCount) { let rx = Math.floor(Math.random() * gridSize), ry = Math.floor(Math.random() * gridSize); if(!iceGrid[ry][rx]) { iceGrid[ry][rx] = true; document.getElementById(`cell-${rx}-${ry}`).classList.add('ice'); icePlaced++; } }
+            
+            sweetPool.forEach(s => destroySweet(s)); board = Array.from({ length: gridSize }, () => Array(gridSize).fill(null));
+            for (let y = 0; y < gridSize; y++) { for (let x = 0; x < gridSize; x++) { let typeObj; do { typeObj = sweetTypes[Math.floor(Math.random() * sweetTypes.length)]; } while ((x>=2 && board[y][x-1]?.type===typeObj.id && board[y][x-2]?.type===typeObj.id) || (y>=2 && board[y-1][x]?.type===typeObj.id && board[y-2][x]?.type===typeObj.id)); board[y][x] = assignSweet(x, y, typeObj, 'none', true); } }
+            
+            if(isNewStart) {
+                if(activeBoosters.bomb) { let rx = Math.floor(Math.random()*gridSize), ry = Math.floor(Math.random()*gridSize); let tObj = sweetTypes[Math.floor(Math.random() * sweetTypes.length)]; destroySweet(board[ry][rx]); board[ry][rx] = assignSweet(rx, ry, tObj, 'bomb', false); }
+                if(activeBoosters.colorBomb) { let rx = Math.floor(Math.random()*gridSize), ry = Math.floor(Math.random()*gridSize); destroySweet(board[ry][rx]); board[ry][rx] = assignSweet(rx, ry, null, 'color_bomb', false); }
+                activeBoosters = { moves: false, bomb: false, colorBomb: false }; document.querySelectorAll('.booster-card').forEach(c => c.classList.remove('active'));
+            }
+
+            if(!hasPossibleMoves()) shuffleBoard(); updateUI(); resetHintTimer();
+        }
+
+        function updateUI() {
+            document.getElementById('score-ui').innerText = score; document.getElementById('moves-ui').innerText = moves;
+            let progress = Math.min(100, (score / targetScore) * 100); document.getElementById('progress-bar').style.width = `${progress}%`;
+        }
+
+        let dragItem = null, targetItem = null, startX, startY, pxX, pxY, cellSize;
+        gridEl.addEventListener('pointerdown', e => {
+            if (isAnimating || moves <= 0 || isPaused) return; clearHint();
+            const rect = gridEl.getBoundingClientRect(); cellSize = rect.width / gridSize;
+            const x = Math.floor((e.clientX - rect.left) / cellSize), y = Math.floor((e.clientY - rect.top) / cellSize);
+            if(x>=0 && x<gridSize && y>=0 && y<gridSize && board[y][x]) { dragItem = board[y][x]; startX = x; startY = y; pxX = e.clientX; pxY = e.clientY; dragItem.element.style.zIndex = "100"; dragItem.element.classList.remove('animating'); }
+        });
+        window.addEventListener('pointermove', e => {
+            if (!dragItem || isAnimating || isPaused) return;
+            let dx = e.clientX - pxX, dy = e.clientY - pxY;
+            if (Math.abs(dx) > Math.abs(dy)) dy = 0; else dx = 0;
+            dx = Math.max(-cellSize, Math.min(cellSize, dx)); dy = Math.max(-cellSize, Math.min(cellSize, dy));
+            let tX = startX + (dx > cellSize*0.5 ? 1 : (dx < -cellSize*0.5 ? -1 : 0)), tY = startY + (dy > cellSize*0.5 ? 1 : (dy < -cellSize*0.5 ? -1 : 0));
+            if(tX < 0 || tX >= gridSize || tY < 0 || tY >= gridSize) { tX = startX; tY = startY; }
+            dragItem.element.style.transform = `translate3d(calc(${startX * 100}% + ${dx}px), calc(${startY * 100}% + ${dy}px), 0)`;
+            if (targetItem && targetItem !== board[tY][tX]) { targetItem.element.classList.add('animating'); updatePositions(targetItem); }
+            if (tX !== startX || tY !== startY) { targetItem = board[tY][tX]; if(targetItem) { targetItem.element.classList.remove('animating'); targetItem.element.style.transform = `translate3d(calc(${tX * 100}% - ${dx}px), calc(${tY * 100}% - ${dy}px), 0)`; } } else targetItem = null;
+        });
+
+        window.addEventListener('pointerup', async () => {
+            if (!dragItem || isPaused) return;
+            let item1 = dragItem, item2 = targetItem;
+            item1.element.style.zIndex = "3"; item1.element.classList.add('animating'); if(item2) item2.element.classList.add('animating');
+            dragItem = null; targetItem = null;
+
+            if (item2 && item1 !== item2 && !isAnimating) {
+                isAnimating = true; playSound('swap'); swapData(item1, item2); updatePositions(item1, item2); await sleep(250);
+                if(item1.special === 'color_bomb' || item2.special === 'color_bomb') {
+                    moves--; currentCombo = 0; updateUI(); let colorTarget = item1.special === 'color_bomb' ? item2.type : item1.type; let bombObj = item1.special === 'color_bomb' ? item1 : item2;
+                    let matches =[]; if(item1.special === 'color_bomb' && item2.special === 'color_bomb') { colorTarget = 'ALL'; } matches.push({ type: 'color_bomb_trigger', color: colorTarget, source: bombObj }); await processMatches(matches); return;
+                }
+                let matchedGroups = findMatches();
+                if (matchedGroups.length > 0) {
+                    moves--; currentCombo = 0; updateUI(); 
+                    matchedGroups.forEach(g => { if(g.some(m => m.x === item1.x && m.y === item1.y)) g.intersection = {x: item1.x, y: item1.y}; else if(g.some(m => m.x === item2.x && m.y === item2.y)) g.intersection = {x: item2.x, y: item2.y}; });
+                    await processMatches(matchedGroups);
+                } else { playSound('swap'); swapData(item1, item2); updatePositions(item1, item2); await sleep(250); isAnimating = false; resetHintTimer(); }
+            } else updatePositions(item1);
+        });
+
+        function swapData(i1, i2) { let tx = i1.x, ty = i1.y; i1.x = i2.x; i1.y = i2.y; i2.x = tx; i2.y = ty; board[i1.y][i1.x] = i1; board[i2.y][i2.x] = i2; }
+        function updatePositions(...items) { items.forEach(i => { if(i) i.element.style.transform = `translate3d(${i.x * 100}%, ${i.y * 100}%, 0)`; }); }
+
+        function findMatches() {
+            let matches =[]; 
+            for(let y=0; y<gridSize; y++) { for(let x=0; x<gridSize-2; x++) { let t = board[y][x]?.type; if(!t || board[y][x].special === 'color_bomb') continue; let mLen = 1; while(x+mLen<gridSize && board[y][x+mLen]?.type===t && board[y][x+mLen]?.special !== 'color_bomb') mLen++; if(mLen>=3) { let group =[]; for(let i=0; i<mLen; i++) group.push({x:x+i, y}); matches.push(group); x += mLen-1; } } }
+            for(let x=0; x<gridSize; x++) { for(let y=0; y<gridSize-2; y++) { let t = board[y][x]?.type; if(!t || board[y][x].special === 'color_bomb') continue; let mLen = 1; while(y+mLen<gridSize && board[y+mLen][x]?.type===t && board[y+mLen][x]?.special !== 'color_bomb') mLen++; if(mLen>=3) { let group =[]; for(let i=0; i<mLen; i++) group.push({x, y:y+i}); matches.push(group); y += mLen-1; } } }
+            return matches;
+        }
+
+        async function processMatches(matchGroups) {
+            currentCombo++; let toDestroy = new Set(), spawnPowerups =[];
+            matchGroups.forEach(g => {
+                if(g.type === 'color_bomb_trigger') { toDestroy.add(`${g.source.x},${g.source.y}`); for(let y=0; y<gridSize; y++){ for(let x=0; x<gridSize; x++){ if(board[y][x] && (g.color === 'ALL' || board[y][x].type === g.color)) { toDestroy.add(`${x},${y}`); } } } return; }
+                if(g.length >= 5) { let target = g.intersection || g[2]; spawnPowerups.push({x: target.x, y: target.y, type: 'color_bomb'}); } 
+                else if(g.length === 4) { let target = g.intersection || g[1]; spawnPowerups.push({x: target.x, y: target.y, type: 'bomb'}); }
+                g.forEach(m => toDestroy.add(`${m.x},${m.y}`));
+            });
+            if(matchGroups.length > 1 && matchGroups[0].type !== 'color_bomb_trigger') { let coords =[], counts = {}; matchGroups.forEach(g => g.forEach(m => coords.push(`${m.x},${m.y}`))); coords.forEach(c => { counts[c] = (counts[c] || 0) + 1; }); for(let c in counts) { if(counts[c] > 1) { const[x, y] = c.split(',').map(Number); if(!spawnPowerups.some(p => p.x === x && p.y === y)) spawnPowerups.push({x, y, type: 'bomb'}); } } }
+            let destroyList = Array.from(toDestroy).map(str => { const [x, y] = str.split(',').map(Number); return {x, y}; }), bombTriggered = false, colorBombTriggered = false, tempDest = [...destroyList];
+            for (let item of tempDest) { let sweet = board[item.y][item.x]; if(sweet && sweet.special === 'bomb') { bombTriggered = true; for(let dy=-1; dy<=1; dy++) { for(let dx=-1; dx<=1; dx++) { let nx = item.x+dx, ny = item.y+dy; if(nx>=0 && nx<gridSize && ny>=0 && ny<gridSize) toDestroy.add(`${nx},${ny}`); } } } if(sweet && sweet.special === 'color_bomb' && matchGroups[0]?.type !== 'color_bomb_trigger') { colorBombTriggered = true; let randType = sweetTypes[Math.floor(Math.random()*sweetTypes.length)].id; for(let y=0; y<gridSize; y++){ for(let x=0; x<gridSize; x++){ if(board[y][x] && board[y][x].type === randType) toDestroy.add(`${x},${y}`); } } } }
+            destroyList = Array.from(toDestroy).map(str => { const[x, y] = str.split(',').map(Number); return {x, y}; });
+            if(colorBombTriggered || matchGroups[0]?.type === 'color_bomb_trigger') { playSound('color_bomb'); boardBorder.classList.add('shake-board'); setTimeout(()=>boardBorder.classList.remove('shake-board'), 600); } else if(bombTriggered) { playSound('bomb'); boardBorder.classList.add('shake-board'); setTimeout(()=>boardBorder.classList.remove('shake-board'), 400); } else { playSound('pop'); }
+            const points = destroyList.length * 10 * currentCombo; score += points; updateUI();
+            destroyList.forEach(({x, y}) => { const s = board[y][x]; if(s) { spawnParticles(x, y, s.color, s.special !== 'none'); if(iceGrid[y][x]) { iceGrid[y][x] = false; document.getElementById(`cell-${x}-${y}`).classList.remove('ice'); } destroySweet(s); board[y][x] = null; } });
+            if(destroyList.length > 0) showFloatingScore(destroyList[0].x, destroyList[0].y, points, currentCombo); await sleep(200);
+            spawnPowerups.forEach(p => { if(board[p.y][p.x] === null) { if(p.type === 'color_bomb') { board[p.y][p.x] = assignSweet(p.x, p.y, null, 'color_bomb', false); } else { let tObj = sweetTypes[Math.floor(Math.random()*sweetTypes.length)]; board[p.y][p.x] = assignSweet(p.x, p.y, tObj, 'bomb', false); } } });
+            await applyGravity(); const nextMatches = findMatches(); if(nextMatches.length > 0) { await sleep(50); await processMatches(nextMatches); } else checkGameState();
+        }
+
+        async function applyGravity() {
+            let moved = false;
+            for (let x = 0; x < gridSize; x++) { let emptyY = gridSize - 1; for (let y = gridSize - 1; y >= 0; y--) { if (board[y][x]) { if (emptyY !== y) { let s = board[y][x]; s.y = emptyY; board[emptyY][x] = s; board[y][x] = null; updatePositions(s); moved = true; } emptyY--; } } for (let y = emptyY; y >= 0; y--) { const tObj = sweetTypes[Math.floor(Math.random() * sweetTypes.length)]; board[y][x] = assignSweet(x, y, tObj, 'none', true); moved = true; } }
+            if (moved) await sleep(300);
+        }
+
+        function checkGameState() {
+            isAnimating = false; let totalIce = iceGrid.flat().filter(i => i).length;
+            if(score >= targetScore && totalIce === 0) {
+                playSound('win'); 
+                let earnedCoins = currentLevel * 100; totalCoins += earnedCoins; updateCoinUI(); document.getElementById('earned-coins').innerText = earnedCoins;
+                document.getElementById('next-level-screen').classList.remove('hidden'); clearHint();
+            } else if (moves <= 0) {
+                playSound('lose'); document.getElementById('game-over-screen').classList.remove('hidden'); clearHint();
+            } else { if(!hasPossibleMoves()) shuffleBoard(); resetHintTimer(); }
+        }
+
+        function resetHintTimer() { clearHint(); hintTimer = setTimeout(() => { let move = findOnePossibleMove(); if(move) board[move.y1][move.x1].element.classList.add('hint'); }, 4000); }
+        function clearHint() { clearTimeout(hintTimer); sweetPool.forEach(s => s.element.classList.remove('hint')); }
+
+        function hasPossibleMoves() { return findOnePossibleMove() !== null; }
+        function findOnePossibleMove() {
+            for(let y=0; y<gridSize; y++){ for(let x=0; x<gridSize; x++){ if(board[y][x] && board[y][x].special === 'color_bomb') return {x1:x, y1:y}; } }
+            for(let y=0; y<gridSize; y++){ for(let x=0; x<gridSize-1; x++){ swapData(board[y][x], board[y][x+1]); let hasM = findMatches().length > 0; swapData(board[y][x], board[y][x+1]); if(hasM) return {x1:x, y1:y}; } }
+            for(let x=0; x<gridSize; x++){ for(let y=0; y<gridSize-1; y++){ swapData(board[y][x], board[y+1][x]); let hasM = findMatches().length > 0; swapData(board[y][x], board[y+1][x]); if(hasM) return {x1:x, y1:y}; } }
+            return null;
+        }
+
+        async function shuffleBoard() {
+            isAnimating = true; showFloatingScore(3, 3, "SHUFFLING!", 0); await sleep(800);
+            let allSweets =[]; for(let y=0; y<gridSize; y++) for(let x=0; x<gridSize; x++) allSweets.push(board[y][x]);
+            for(let i=allSweets.length-1; i>0; i--) { let j = Math.floor(Math.random()*(i+1)); [allSweets[i], allSweets[j]] = [allSweets[j], allSweets[i]]; }
+            let i=0; for(let y=0; y<gridSize; y++) { for(let x=0; x<gridSize; x++) { let s = allSweets[i++]; s.x = x; s.y = y; board[y][x] = s; updatePositions(s); } }
+            await sleep(350); let checkM = findMatches(); if(checkM.length>0) processMatches(checkM); else { isAnimating=false; resetHintTimer(); if(!hasPossibleMoves()) shuffleBoard(); }
+        }
+
+        function showFloatingScore(x, y, pts, combo) {
+            const el = document.createElement('div'); el.className = 'floating-text'; el.innerText = pts === "SHUFFLING!" ? pts : (combo > 1 ? `Combo x${combo}!` : `+${pts}`);
+            if(combo>1) el.style.color = '#00e5ff'; el.style.left = `${(x+0.5)*(100/gridSize)}%`; el.style.top = `${(y+0.5)*(100/gridSize)}%`;
+            gridEl.appendChild(el); setTimeout(()=>el.remove(), 1000);
+        }
+    </script>
+
+    <!-- ADSTERRA SOCIAL BAR -->
+    <script type="text/javascript" src="//resignedincidentallysurprise.com/58/df/98/58df98b81b3bc6a01d074dffbf90262f.js"></script>
+</body>
+</html>
